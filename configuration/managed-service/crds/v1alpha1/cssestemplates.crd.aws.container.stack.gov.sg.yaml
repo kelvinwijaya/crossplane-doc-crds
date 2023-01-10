@@ -1,0 +1,232 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    container.stack.gov.sg/instance: cstack-crossplane
+  name: cssestemplates.crd.aws.container.stack.gov.sg
+spec:
+  conversion:
+    strategy: None
+  group: crd.aws.container.stack.gov.sg
+  names:
+    categories:
+      - cstack
+      - claim
+    kind: CSSesTemplate
+    listKind: CSSesTemplateList
+    plural: cssestemplates
+    singular: cssestemplate
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Name of the managed resource.
+          jsonPath: .metadata.annotations.ses-mail/template
+          name: Template Name
+          type: string
+        - description: Specifies what will happen to the underlying external when this managed resource is deleted.
+          jsonPath: .spec.parameters.deletionPolicy
+          name: Deletion Policy
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .spec.writeConnectionSecretToRef.name
+          name: CONNECTION-SECRET
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                compositeDeletePolicy:
+                  default: Background
+                  enum:
+                    - Background
+                    - Foreground
+                  type: string
+                compositionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionRevisionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionSelector:
+                  properties:
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                    - matchLabels
+                  type: object
+                compositionUpdatePolicy:
+                  default: Automatic
+                  enum:
+                    - Automatic
+                    - Manual
+                  type: string
+                parameters:
+                  properties:
+                    deletionPolicy:
+                      default: Orphan
+                      description: Specifies whether to allow the actual Managed Resource to be deleted.
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                    templateContent:
+                      description: The content of the email template, composed of a subject line, an HTML part, and a text-only part.
+                      properties:
+                        html:
+                          description: The HTML body of the email.
+                          type: string
+                        subject:
+                          description: The subject line of the email.
+                          type: string
+                        text:
+                          description: The email body that will be visible to recipients whose email clients do not display HTML.
+                          type: string
+                      type: object
+                    templateName:
+                      description: The name of the template you want to create.
+                      type: string
+                  required:
+                    - templateContent
+                  type: object
+                publishConnectionDetailsTo:
+                  properties:
+                    configRef:
+                      default:
+                        name: default
+                      properties:
+                        name:
+                          type: string
+                      type: object
+                    metadata:
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        type:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                resourceRef:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - parameters
+              type: object
+            status:
+              properties:
+                awsConditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the last time this condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: A Message containing details about this condition's last transition from one status to another, if any.
+                        type: string
+                      reason:
+                        description: A Reason for this condition's last transition from one status to another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: Type of this condition. At most one of each condition type may apply to a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                connectionDetails:
+                  properties:
+                    lastPublishedTime:
+                      format: date-time
+                      type: string
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

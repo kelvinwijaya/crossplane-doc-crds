@@ -1,0 +1,281 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    container.stack.gov.sg/instance: cstack-crossplane
+  name: csqueues.crd.aws.container.stack.gov.sg
+spec:
+  conversion:
+    strategy: None
+  group: crd.aws.container.stack.gov.sg
+  names:
+    categories:
+      - cstack
+      - claim
+    kind: CSQueue
+    listKind: CSQueueList
+    plural: csqueues
+    singular: csqueue
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Name of the managed resource.
+          jsonPath: .metadata.annotations.queue/queue-name
+          name: Queue Name
+          type: string
+        - description: URL of the SQS Queue.
+          jsonPath: .status.parameters.url
+          name: Queue URL
+          type: string
+        - description: Specifies what will happen to the underlying external when this managed resource is deleted.
+          jsonPath: .spec.parameters.deletionPolicy
+          name: Deletion Policy
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .spec.writeConnectionSecretToRef.name
+          name: CONNECTION-SECRET
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                compositeDeletePolicy:
+                  default: Background
+                  enum:
+                    - Background
+                    - Foreground
+                  type: string
+                compositionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionRevisionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionSelector:
+                  properties:
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                    - matchLabels
+                  type: object
+                compositionUpdatePolicy:
+                  default: Automatic
+                  enum:
+                    - Automatic
+                    - Manual
+                  type: string
+                parameters:
+                  properties:
+                    contentBasedDeduplication:
+                      description: Enables content-based deduplication for FIFO queues.
+                      type: boolean
+                    delaySeconds:
+                      default: 0
+                      description: The length of time for which the delivery of all messages in the queue is delayed.
+                      maximum: 900
+                      minimum: 0
+                      type: integer
+                    deletionPolicy:
+                      default: Orphan
+                      description: Specifies what will happen to the underlying external when this managed resource is deleted.
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                    fifoQueue:
+                      default: false
+                      description: Designates a queue as FIFO. If not set, it defaults to `false` making it standard.
+                      type: boolean
+                    maxMessageSize:
+                      default: 262144
+                      description: The limit of how many bytes a message can contain before Amazon SQS rejects it.
+                      maximum: 262144
+                      minimum: 1024
+                      type: integer
+                    messageRetentionSeconds:
+                      default: 345600
+                      description: The length of time for which Amazon SQS retains a message.
+                      maximum: 1209600
+                      minimum: 60
+                      type: integer
+                    receiveMessageWaitTimeSeconds:
+                      default: 0
+                      description: The length of time for which a ReceiveMessage call will wait for a message to arrive (long polling) before returning.
+                      maximum: 20
+                      minimum: 0
+                      type: integer
+                    redrivePolicy:
+                      description: Includes the parameters for the dead-letter queue functionality of the source queue.
+                      properties:
+                        deadLetterTargetRef:
+                          description: The reference to the dead-letter queue which Amazon SQS moves messages after the value of `maxReceiveCount` is exceeded.
+                          properties:
+                            name:
+                              description: The name of the referenced queue.
+                              type: string
+                          required:
+                            - name
+                          type: object
+                        maxReceiveCount:
+                          description: The number of times a message is delivered to the source queue before being moved to the dead-letter queue.
+                          minimum: 0
+                          type: integer
+                      required:
+                        - deadLetterTargetRef
+                        - maxReceiveCount
+                      type: object
+                    visibilityTimeoutSeconds:
+                      default: 30
+                      description: The visibility timeout for the queue.
+                      maximum: 43200
+                      minimum: 0
+                      type: integer
+                  type: object
+                publishConnectionDetailsTo:
+                  properties:
+                    configRef:
+                      default:
+                        name: default
+                      properties:
+                        name:
+                          type: string
+                      type: object
+                    metadata:
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        type:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                resourceRef:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - parameters
+              type: object
+            status:
+              properties:
+                awsConditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the last time this condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: A Message containing details about this condition's last transition from one status to another, if any.
+                        type: string
+                      reason:
+                        description: A Reason for this condition's last transition from one status to another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: Type of this condition. At most one of each condition type may apply to a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                connectionDetails:
+                  properties:
+                    lastPublishedTime:
+                      format: date-time
+                      type: string
+                  type: object
+                parameters:
+                  properties:
+                    url:
+                      description: URL of the SQS queue.
+                      type: string
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

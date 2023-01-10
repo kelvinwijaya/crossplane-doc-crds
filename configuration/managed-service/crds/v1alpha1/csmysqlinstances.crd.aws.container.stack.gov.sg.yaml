@@ -1,0 +1,265 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    container.stack.gov.sg/instance: cstack-crossplane
+  name: csmysqlinstances.crd.aws.container.stack.gov.sg
+spec:
+  conversion:
+    strategy: None
+  group: crd.aws.container.stack.gov.sg
+  names:
+    categories:
+      - cstack
+      - claim
+    kind: CSMySQLInstance
+    listKind: CSMySQLInstanceList
+    plural: csmysqlinstances
+    singular: csmysqlinstance
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Name of the managed resource.
+          jsonPath: .metadata.annotations.rds-mysql/database-name
+          name: Database Name
+          type: string
+        - description: Specifies what will happen to the underlying external when this managed resource is deleted.
+          jsonPath: .spec.parameters.deletionPolicy
+          name: Deletion Policy
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .spec.writeConnectionSecretToRef.name
+          name: CONNECTION-SECRET
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                compositeDeletePolicy:
+                  default: Background
+                  enum:
+                    - Background
+                    - Foreground
+                  type: string
+                compositionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionRevisionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionSelector:
+                  properties:
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                    - matchLabels
+                  type: object
+                compositionUpdatePolicy:
+                  default: Automatic
+                  enum:
+                    - Automatic
+                    - Manual
+                  type: string
+                parameters:
+                  properties:
+                    allocatedStorage:
+                      description: amount of storage (in gibibytes) to allocate for the DB instance
+                      type: integer
+                    allowMajorVersionUpgrade:
+                      default: false
+                      description: indicates that major version upgrades are allowed. Changing this parameter doesn't result in an outage and the change is asynchronously applied as soon as possible. Ref - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.MySQL.html#USER_UpgradeDBInstance.MySQL.Major
+                      type: boolean
+                    autoMinorVersionUpgrade:
+                      default: true
+                      description: indicates that minor engine upgrades are applied automatically to the DB instance during the maintenance window.
+                      type: boolean
+                    dbInstanceClass:
+                      description: compute and memory capacity of the DB instance
+                      enum:
+                        - db.t2.small
+                        - db.t3.micro
+                        - db.t3.small
+                        - db.t3.medium
+                      type: string
+                    deletionPolicy:
+                      default: Orphan
+                      description: Specifies whether to allow the actual Managed Resource to be deleted.
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                    engine:
+                      description: name of the database engine to be used for this instance
+                      enum:
+                        - mysql
+                      type: string
+                    engineVersion:
+                      description: version number of the database engine to use.
+                      enum:
+                        - "5.7"
+                        - "8.0"
+                      type: string
+                    masterUsername:
+                      description: name for the master user
+                      type: string
+                    secretName:
+                      description: (CStack) Reference to Kubernetes secret object
+                      type: string
+                  required:
+                    - dbInstanceClass
+                    - engineVersion
+                    - engine
+                    - secretName
+                    - allocatedStorage
+                  type: object
+                publishConnectionDetailsTo:
+                  properties:
+                    configRef:
+                      default:
+                        name: default
+                      properties:
+                        name:
+                          type: string
+                      type: object
+                    metadata:
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        type:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                resourceRef:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - parameters
+              type: object
+            status:
+              properties:
+                awsConditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the last time this condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: A Message containing details about this condition's last transition from one status to another, if any.
+                        type: string
+                      reason:
+                        description: A Reason for this condition's last transition from one status to another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: Type of this condition. At most one of each condition type may apply to a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                connectionDetails:
+                  properties:
+                    lastPublishedTime:
+                      format: date-time
+                      type: string
+                  type: object
+                parameters:
+                  properties:
+                    dbInstanceStatus:
+                      description: DBInstanceStatus specifies the current state of this database.
+                      type: string
+                    dbParameterGroupName:
+                      description: DBParameterGroupName specifies how the database is configured.
+                      type: string
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

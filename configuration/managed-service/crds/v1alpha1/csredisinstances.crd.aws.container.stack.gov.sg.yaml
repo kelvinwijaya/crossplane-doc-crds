@@ -1,0 +1,267 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    container.stack.gov.sg/instance: cstack-crossplane
+  name: csredisinstances.crd.aws.container.stack.gov.sg
+spec:
+  conversion:
+    strategy: None
+  group: crd.aws.container.stack.gov.sg
+  names:
+    categories:
+      - cstack
+      - claim
+    kind: CSRedisInstance
+    listKind: CSRedisInstanceList
+    plural: csredisinstances
+    singular: csredisinstance
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Name of the managed resource.
+          jsonPath: .metadata.annotations.elasticache-redis/cache-name
+          name: Cache Name
+          type: string
+        - description: Specifies what will happen to the underlying external when this managed resource is deleted.
+          jsonPath: .spec.parameters.deletionPolicy
+          name: Deletion Policy
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Synced')].status
+          name: SYNCED
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: READY
+          type: string
+        - jsonPath: .spec.writeConnectionSecretToRef.name
+          name: CONNECTION-SECRET
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                compositeDeletePolicy:
+                  default: Background
+                  enum:
+                    - Background
+                    - Foreground
+                  type: string
+                compositionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionRevisionRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                compositionSelector:
+                  properties:
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  required:
+                    - matchLabels
+                  type: object
+                compositionUpdatePolicy:
+                  default: Automatic
+                  enum:
+                    - Automatic
+                    - Manual
+                  type: string
+                parameters:
+                  properties:
+                    dailySnapshots:
+                      default: false
+                      description: Enable daily backups for the cache cluster. Snapshots are stored as a RDB file in the tenant project bucket. Defaults to false.
+                      type: boolean
+                    deletionPolicy:
+                      default: Orphan
+                      description: Specifies what will happen to the underlying external when this managed resource is deleted. Defaults to "Orphan".
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                    engine:
+                      description: Name of the cache engine to be used.
+                      enum:
+                        - redis
+                      type: string
+                    engineVersion:
+                      description: Version number of the cache engine to be used.
+                      enum:
+                        - 5.0.6
+                        - 6.x
+                      type: string
+                    maintenanceWindow:
+                      default: sat:16:00-sat:17:00
+                      description: Weekly time range for when maintenance on the cache cluster is performed. The format is ddd:hh24:mi-ddd:hh24:mi (24H Clock UTC). The minimum maintenance window is a 60 minute period. This window must not overlap with the daily snapshot window. Defaults to "sat:16:00-sat:17:00" (Sunday 00:00-01:00 SGT).
+                      pattern: ^(mon|tue|wed|thu|fri|sat|sun):\d\d:\d\d-(mon|tue|wed|thu|fri|sat|sun):\d\d:\d\d$
+                      type: string
+                    nodeType:
+                      description: Instance class to be used.
+                      enum:
+                        - cache.t3.micro
+                        - cache.t3.small
+                        - cache.t3.medium
+                      type: string
+                    secretName:
+                      description: Name of the secret containing the authentication token for the cache.
+                      type: string
+                    snapshotName:
+                      description: Name of a Redis RDB file in the tenant project bucket to populate the new cache cluster. The S3 object name cannot contain any commas.
+                      pattern: ^([a-zA-Z0-9-.]+/)*[a-zA-Z0-9-]+.rdb$
+                      type: string
+                    snapshotWindow:
+                      default: 17:00-18:00
+                      description: Daily time range for when daily snapshot of cache cluster is performed. The format is hh24:mi-hh24:mi (24H Clock UTC). The minimum snapshot window is a 60 minute period. This window must not overlap with the weekly maintenance window. Defaults to "17:00-18:00" (01:00-02:00 SGT).
+                      pattern: ^\d\d:\d\d-\d\d:\d\d$
+                      type: string
+                  required:
+                    - engine
+                    - engineVersion
+                    - nodeType
+                    - secretName
+                  type: object
+                publishConnectionDetailsTo:
+                  properties:
+                    configRef:
+                      default:
+                        name: default
+                      properties:
+                        name:
+                          type: string
+                      type: object
+                    metadata:
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        type:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+                resourceRef:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  type: object
+                writeConnectionSecretToRef:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                  type: object
+              required:
+                - parameters
+              type: object
+            status:
+              properties:
+                awsConditions:
+                  description: Conditions of the resource.
+                  items:
+                    description: A Condition that may apply to a resource.
+                    properties:
+                      lastTransitionTime:
+                        description: LastTransitionTime is the last time this condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: A Message containing details about this condition's last transition from one status to another, if any.
+                        type: string
+                      reason:
+                        description: A Reason for this condition's last transition from one status to another.
+                        type: string
+                      status:
+                        description: Status of this condition; is it currently True, False, or Unknown?
+                        type: string
+                      type:
+                        description: Type of this condition. At most one of each condition type may apply to a resource at any point in time.
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                conditions:
+                  description: Conditions of the resource.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                connectionDetails:
+                  properties:
+                    lastPublishedTime:
+                      format: date-time
+                      type: string
+                  type: object
+                parameters:
+                  properties:
+                    snapshotBucket:
+                      description: Tenant project bucket that is used to restore snapshots & store daily snapshots.
+                      type: string
+                    snapshotClusterID:
+                      description: Cluster ID that is used as the daily snapshot source.
+                      type: string
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
